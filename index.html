@@ -3,60 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sugeridor Pro - Vibras Positivas</title>
+    <title>DISTRILECO CAUCASIA SAS - Sugeridor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        .pwa-scroll { height: calc(100vh - 380px); overflow-y: auto; }
-        .card-proveedor { transition: transform 0.2s; border-left: 5px solid #2563eb; }
-        .card-proveedor:active { transform: scale(0.98); }
+        .pwa-scroll { height: calc(100vh - 420px); overflow-y: auto; }
+        .card-distrileco { border-left: 8px solid #b91c1c; border-radius: 15px; transition: transform 0.2s; }
+        .card-distrileco:active { transform: scale(0.98); }
     </style>
 </head>
 <body class="bg-slate-100 font-sans p-2">
 
-    <div class="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden min-h-screen flex flex-col">
+    <div class="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden min-h-screen flex flex-col border-b-8 border-red-700">
         
-        <header class="bg-blue-800 p-5 text-white shadow-lg text-center">
-            <h1 class="text-xl font-black italic tracking-wider uppercase">Vibras Positivas</h1>
-            <p class="text-[10px] opacity-70 font-bold uppercase">Análisis de Reposición y Sugeridos</p>
+        <header class="bg-white p-5 text-center border-b-4 border-red-700 shadow-sm">
+            <h1 class="text-2xl font-black text-red-700 tracking-tighter uppercase leading-none">DISTRILECO CAUCASIA SAS</h1>
+            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-2">Gestión de Compras: Sugerido 60D + 20%</p>
         </header>
 
         <div class="p-4 flex-grow">
-            <div class="mb-4 bg-blue-50 p-3 rounded-xl border border-blue-200">
-                <label class="block text-[10px] font-bold text-blue-800 mb-1">CARGAR EXCEL DE MOVIMIENTOS:</label>
-                <input type="file" id="excelInput" accept=".xlsx, .xls" 
-                       class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700">
+            <div class="mb-4 bg-red-50 p-4 rounded-2xl border-2 border-dashed border-red-200">
+                <label class="block text-[10px] font-black text-red-800 mb-2 uppercase italic">🔄 CARGAR EXCEL (Limpia datos anteriores):</label>
+                <input type="file" id="excelInput" accept=".xlsx, .xls" onclick="resetearMemoria()"
+                       class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-6 file:rounded-full file:border-0 file:bg-red-700 file:text-white cursor-pointer shadow-md">
             </div>
 
-            <div class="grid grid-cols-2 gap-2 mb-4">
-                <input type="text" id="searchInput" onkeyup="filtrar()" placeholder="Buscar Proveedor o Producto..." 
-                       class="col-span-2 p-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none text-sm">
+            <div class="mb-4 p-4 bg-green-50 rounded-2xl border-2 border-green-600 shadow-md">
+                <button onclick="exportarExcel()" id="btnExportar" disabled 
+                        class="w-full bg-green-700 text-white text-sm font-black py-5 px-6 rounded-xl shadow-xl opacity-40 cursor-not-allowed uppercase flex items-center justify-center gap-3">
+                    📥 DESCARGAR INFORME EXCEL POR PROVEEDOR
+                </button>
             </div>
 
-            <div id="listaContenedor" class="pwa-scroll space-y-3 pr-1">
-                <div class="text-center py-10 text-slate-400 italic text-sm">
-                    Esperando base de datos para generar sugeridos...
+            <div class="relative mb-4">
+                <input type="text" id="searchInput" onkeyup="filtrar()" placeholder="Escribe el PROVEEDOR o PRODUCTO..." 
+                       class="w-full p-4 border-2 border-slate-200 rounded-2xl focus:border-red-700 outline-none text-md font-black shadow-inner">
+                <span class="absolute right-4 top-4 text-gray-400">🔍</span>
+            </div>
+
+            <div id="listaContenedor" class="pwa-scroll space-y-3 pr-1 border-t-2 border-gray-100 pt-4">
+                <div class="text-center py-20 text-slate-400 italic text-sm bg-gray-50 rounded-2xl">
+                    Esperando datos de Distrileco para generar análisis...
                 </div>
             </div>
         </div>
 
-        <footer class="bg-slate-50 p-4 border-t">
-            <div id="geoDisplay" class="text-[9px] text-center text-blue-600 font-bold mb-2 uppercase italic">📍 Obteniendo coordenadas...</div>
-            <p class="text-[10px] text-center font-black text-slate-700">APP DESARROLLADA POR VIBRAS POSITIVAS © 2026</p>
-            <p class="text-[9px] text-center text-slate-400 italic">Derechos Reservados - Contacto: 3117700431</p>
+        <footer class="bg-gray-100 p-5 border-t-2 text-center">
+            <div id="geoDisplay" class="text-[9px] text-red-600 font-bold mb-3 italic">📍 Geolocalización vinculada al análisis</div>
+            <p class="text-[10px] font-black text-gray-800 uppercase">App desarrollada por Vibras Positivas © 2026</p>
+            <p class="text-[9px] text-gray-400 font-bold uppercase">Derecho de autor: 3117700431 | Especialista Distrileco</p>
         </footer>
     </div>
 
     <script>
         let baseDatos = [];
+        let datosFiltrados = [];
         let linkMapa = "";
 
-        // Geolocalización (Regla de Oro)
+        // Geolocalización
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(p => {
                 linkMapa = `https://www.google.com/maps?q=${p.coords.latitude},${p.coords.longitude}`;
-                document.getElementById('geoDisplay').innerText = "📍 Geolocalización vinculada al pedido";
             });
+        }
+
+        // Limpia memoria al seleccionar archivo nuevo
+        function resetearMemoria() {
+            baseDatos = [];
+            datosFiltrados = [];
+            document.getElementById('listaContenedor').innerHTML = `<div class="text-center py-10 text-red-600 font-black animate-pulse uppercase">¡BORRANDO CACHÉ! LISTO PARA NUEVA DATA...</div>`;
+            document.getElementById('btnExportar').disabled = true;
+            document.getElementById('btnExportar').classList.add('opacity-40');
         }
 
         document.getElementById('excelInput').addEventListener('change', function(e) {
@@ -66,28 +83,33 @@
                 const workbook = XLSX.read(data, { type: 'array' });
                 const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: "A" });
 
-                // Procesamiento con Lógica de Negocio
+                // Procesamiento con Lógica de Negocio: (L * 1.2) - J
                 baseDatos = json.filter(r => r.O && r.O !== "PROVEEDOR").map(r => {
-                    const promedioVenta = parseFloat(r.L) || 0;
-                    const stockActual = parseFloat(r.J) || 0;
+                    const venta60 = parseFloat(r.L) || 0;
+                    const stockJ = parseFloat(r.J) || 0;
                     
-                    // Lógica del Sugerido: Pedir para cubrir 30 días adicionales basado en promedio de 60
-                    // Sugerido = (Venta diaria * 30 días) - Stock Actual
-                    const sugeridoCalculado = Math.max(0, Math.ceil((promedioVenta / 2) - stockActual));
+                    // Fórmula: Venta 60d + 20% - Bodega
+                    const calculo = Math.ceil((venta60 * 1.2) - stockJ);
+                    const sugeridoApp = Math.max(0, calculo);
 
                     return {
-                        proveedor: r.O,
-                        producto: r.D,
-                        referencia: r.A,
-                        promedio: promedioVenta,
-                        stock: stockActual,
-                        sugeridoExcel: r.H,
-                        sugeridoApp: sugeridoCalculado,
-                        unidad: r.C || 'UND',
-                        ultimaCompra: r.V || 'N/A',
-                        diasSinCompra: r.M || 0
+                        PROVEEDOR: r.O,
+                        PRODUCTO: r.D,
+                        REFERENCIA: r.A,
+                        VENTA_60D: venta60,
+                        BODEGA: stockJ,
+                        UNIDAD: r.C,
+                        ULTIMA_COMPRA: r.V,
+                        DIAS_SC: r.M,
+                        PEDIDO_SUGERIDO: sugeridoApp
                     };
                 });
+                
+                datosFiltrados = [...baseDatos];
+                if(baseDatos.length > 0) {
+                    document.getElementById('btnExportar').disabled = false;
+                    document.getElementById('btnExportar').classList.remove('opacity-40');
+                }
                 renderizar(baseDatos);
             };
             reader.readAsArrayBuffer(e.target.files[0]);
@@ -95,59 +117,48 @@
 
         function renderizar(datos) {
             const container = document.getElementById('listaContenedor');
-            if(datos.length === 0) return;
+            if(datos.length === 0) {
+                container.innerHTML = `<p class="text-center text-red-500 mt-10 font-bold uppercase italic">Sin resultados</p>`;
+                return;
+            }
 
             container.innerHTML = datos.map(p => `
-                <div class="card-proveedor bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <div class="flex justify-between items-start">
-                        <div class="w-2/3">
-                            <span class="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase">${p.proveedor}</span>
-                            <h3 class="font-bold text-slate-800 text-sm mt-1 leading-tight">${p.producto}</h3>
-                            <p class="text-[10px] text-slate-500 font-mono">Ref: ${p.referencia} | Última: ${p.ultimaCompra}</p>
+                <div class="card-distrileco bg-white p-4 shadow-md border border-gray-100">
+                    <div class="flex justify-between items-start mb-3 border-b pb-2">
+                        <div class="w-3/4">
+                            <span class="text-[9px] bg-red-700 text-white px-2 py-0.5 rounded font-black uppercase italic">${p.PROVEEDOR}</span>
+                            <h3 class="font-black text-gray-800 text-sm mt-1 uppercase leading-tight">${p.PRODUCTO}</h3>
+                            <p class="text-[10px] text-red-600 font-bold italic">REF: ${p.REFERENCIA}</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-[9px] text-slate-400 uppercase">Sugerido App</p>
-                            <p class="text-xl font-black text-blue-600">${p.sugeridoApp} <span class="text-[10px]">${p.unidad}</span></p>
+                            <p class="text-3xl font-black text-red-700 leading-none">${p.PEDIDO_SUGERIDO}</p>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase italic">${p.UNIDAD}</p>
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-100 text-center">
-                        <div>
-                            <p class="text-[8px] text-slate-400 uppercase tracking-tighter">Venta 60d</p>
-                            <p class="text-[11px] font-bold text-slate-700">${p.promedio}</p>
-                        </div>
-                        <div>
-                            <p class="text-[8px] text-slate-400 uppercase tracking-tighter">Bodega</p>
-                            <p class="text-[11px] font-bold ${p.stock < (p.promedio/4) ? 'text-red-600' : 'text-slate-700'}">${p.stock}</p>
-                        </div>
-                        <div>
-                            <p class="text-[8px] text-slate-400 uppercase tracking-tighter">Días s/c</p>
-                            <p class="text-[11px] font-bold text-slate-700">${p.diasSinCompra}</p>
-                        </div>
+                    <div class="grid grid-cols-2 gap-4 text-[11px] font-bold text-gray-600 italic">
+                        <p>Venta 60d (L): <span class="text-black not-italic">${p.VENTA_60D}</span></p>
+                        <p class="text-right">Bodega (J): <span class="text-black not-italic">${p.BODEGA}</span></p>
+                        <p>Días s/c: <span class="text-orange-600 font-black">${p.DIAS_SC}</span></p>
+                        <p class="text-right text-gray-400">Última: ${p.ULTIMA_COMPRA}</p>
                     </div>
-
-                    <button onclick="pedirWhatsApp('${p.proveedor}', '${p.producto}', '${p.sugeridoApp}', '${p.unidad}')" 
-                            class="w-full mt-3 bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                        📱 PEDIR ESTA SUGERENCIA
-                    </button>
                 </div>
             `).join('');
         }
 
         function filtrar() {
             const q = document.getElementById('searchInput').value.toUpperCase();
-            const f = baseDatos.filter(p => p.proveedor.includes(q) || p.producto.includes(q));
-            renderizar(f);
+            datosFiltrados = baseDatos.filter(p => p.PROVEEDOR.toString().toUpperCase().includes(q) || p.PRODUCTO.toString().toUpperCase().includes(q));
+            renderizar(datosFiltrados);
         }
 
-        function pedirWhatsApp(prov, prod, sug, uni) {
-            const msj = `*ORDEN DE COMPRA - VIBRAS POSITIVAS*%0A%0A` +
-                        `*Proveedor:* ${prov}%0A` +
-                        `*Producto:* ${prod}%0A` +
-                        `*Sugerido:* ${sug} ${uni}%0A%0A` +
-                        `📍 *Ubicación Planta:* ${linkMapa}%0A%0A` +
-                        `_Generado por Analizador Vibras Positivas_`;
-            window.open(`https://wa.me/3117700431?text=${msj}`, '_blank');
+        function exportarExcel() {
+            if(datosFiltrados.length === 0) return;
+            const ws = XLSX.utils.json_to_sheet(datosFiltrados);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Sugerido_Distrileco");
+            const q = document.getElementById('searchInput').value || "GENERAL";
+            XLSX.writeFile(wb, `PEDIDO_${q.toUpperCase()}_DISTRILECO.xlsx`);
         }
     </script>
 </body>
