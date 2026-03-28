@@ -3,104 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sugeridor de Pedidos - Vibras Positivas</title>
+    <title>Sugeridor Pro - Vibras Positivas</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { background-color: #f3f4f6; font-family: sans-serif; }
-        .pwa-card { border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .btn-vibras { background-color: #2563eb; color: white; transition: 0.3s; }
-        .btn-vibras:hover { background-color: #1d4ed8; }
+        .pwa-scroll { height: calc(100vh - 380px); overflow-y: auto; }
+        .card-proveedor { transition: transform 0.2s; border-left: 5px solid #2563eb; }
+        .card-proveedor:active { transform: scale(0.98); }
     </style>
 </head>
-<body class="p-4">
+<body class="bg-slate-100 font-sans p-2">
 
-    <div class="max-w-md mx-auto bg-white pwa-card p-6">
-        <header class="text-center mb-6">
-            <h1 class="text-2xl font-bold text-blue-600">¿Qué pedir hoy?</h1>
-            <p class="text-gray-500 text-sm">Asistente de Pedidos Inteligente</p>
+    <div class="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden min-h-screen flex flex-col">
+        
+        <header class="bg-blue-800 p-5 text-white shadow-lg text-center">
+            <h1 class="text-xl font-black italic tracking-wider uppercase">Vibras Positivas</h1>
+            <p class="text-[10px] opacity-70 font-bold uppercase">Análisis de Reposición y Sugeridos</p>
         </header>
 
-        <div class="mb-4">
-            <input type="text" id="searchInput" placeholder="Buscar producto o marca..." 
-                   class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+        <div class="p-4 flex-grow">
+            <div class="mb-4 bg-blue-50 p-3 rounded-xl border border-blue-200">
+                <label class="block text-[10px] font-bold text-blue-800 mb-1">CARGAR EXCEL DE MOVIMIENTOS:</label>
+                <input type="file" id="excelInput" accept=".xlsx, .xls" 
+                       class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700">
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mb-4">
+                <input type="text" id="searchInput" onkeyup="filtrar()" placeholder="Buscar Proveedor o Producto..." 
+                       class="col-span-2 p-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none text-sm">
+            </div>
+
+            <div id="listaContenedor" class="pwa-scroll space-y-3 pr-1">
+                <div class="text-center py-10 text-slate-400 italic text-sm">
+                    Esperando base de datos para generar sugeridos...
+                </div>
+            </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 mb-6">
-            <button onclick="sugerirProducto()" class="btn-vibras p-3 rounded-lg font-bold">✨ Sugerirme</button>
-            <button onclick="buscarManual()" class="bg-gray-200 p-3 rounded-lg font-bold">🔍 Buscar</button>
-        </div>
-
-        <div id="displayArea" class="border-t pt-4 min-h-[150px]">
-            <p class="text-center text-gray-400 mt-10">Presiona "Sugerirme" para empezar</p>
-        </div>
-
-        <div id="geoStatus" class="text-xs text-center mt-4 text-green-600 font-bold"></div>
-
-        <footer class="mt-8 pt-4 border-t text-center text-xs text-gray-500">
-            <p class="font-bold">App desarrollada por Vibras Positivas</p>
-            <p>Derechos Reservados © 2026</p>
-            <p>Contacto: 3117700431</p>
+        <footer class="bg-slate-50 p-4 border-t">
+            <div id="geoDisplay" class="text-[9px] text-center text-blue-600 font-bold mb-2 uppercase italic">📍 Obteniendo coordenadas...</div>
+            <p class="text-[10px] text-center font-black text-slate-700">APP DESARROLLADA POR VIBRAS POSITIVAS © 2026</p>
+            <p class="text-[9px] text-center text-slate-400 italic">Derechos Reservados - Contacto: 3117700431</p>
         </footer>
     </div>
 
     <script>
-        // Simulación de base de datos basada en tus columnas:
-        // O:CÓDIGO, D:DESCRIPCIÓN, A:LÍNEA, L:MARCA, J:PRESENTACIÓN, H:UNIDAD, E:SALDO, V:VALOR, M:IVA
-        const productos = [
-            { o: "001", d: "ARROZ SUPERARROZ", a: "GRANOS", l: "SUPERARROZ", j: "500G", h: "UND", e: 50, v: 2500, m: 0 },
-            { o: "002", d: "ACEITE VISTAHERMOSA", a: "ABARROTES", l: "VISTAHERMOSA", j: "1000ML", h: "UND", e: 20, v: 8500, m: 19 },
-            { o: "003", d: "DETERGENTE EN POLVO", a: "ASEO", l: "MARCA X", j: "1KG", h: "PAQ", e: 15, v: 12000, m: 19 }
-        ];
+        let baseDatos = [];
+        let linkMapa = "";
 
-        let ubicacionActual = "";
-
-        // Inicializar Geolocalización al abrir
-        window.onload = () => {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    ubicacionActual = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
-                    document.getElementById('geoStatus').innerText = "📍 Ubicación lista para el pedido";
-                });
-            }
-        };
-
-        function sugerirProducto() {
-            const disponibles = productos.filter(p => p.e > 0);
-            const elegido = disponibles[Math.floor(Math.random() * disponibles.length)];
-            renderizarProducto(elegido);
+        // Geolocalización (Regla de Oro)
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(p => {
+                linkMapa = `https://www.google.com/maps?q=${p.coords.latitude},${p.coords.longitude}`;
+                document.getElementById('geoDisplay').innerText = "📍 Geolocalización vinculada al pedido";
+            });
         }
 
-        function renderizarProducto(p) {
-            const precioFinal = p.v * (1 + (p.m / 100));
-            const html = `
-                <div class="bg-blue-50 p-4 rounded-lg animate-pulse">
-                    <h3 class="font-bold text-lg text-blue-800">${p.d}</h3>
-                    <p class="text-sm text-gray-600">Marca: ${p.l} | Presentación: ${p.j}</p>
-                    <p class="text-xl font-bold mt-2">$${precioFinal.toLocaleString()} <span class="text-xs font-normal">IVA Inc.</span></p>
-                    <button onclick="pedirWhatsApp('${p.d}', '${p.j}', ${precioFinal})" 
-                            class="w-full mt-4 bg-green-500 text-white p-2 rounded-lg font-bold flex items-center justify-center gap-2">
-                        📱 Pedir por WhatsApp
+        document.getElementById('excelInput').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: "A" });
+
+                // Procesamiento con Lógica de Negocio
+                baseDatos = json.filter(r => r.O && r.O !== "PROVEEDOR").map(r => {
+                    const promedioVenta = parseFloat(r.L) || 0;
+                    const stockActual = parseFloat(r.J) || 0;
+                    
+                    // Lógica del Sugerido: Pedir para cubrir 30 días adicionales basado en promedio de 60
+                    // Sugerido = (Venta diaria * 30 días) - Stock Actual
+                    const sugeridoCalculado = Math.max(0, Math.ceil((promedioVenta / 2) - stockActual));
+
+                    return {
+                        proveedor: r.O,
+                        producto: r.D,
+                        referencia: r.A,
+                        promedio: promedioVenta,
+                        stock: stockActual,
+                        sugeridoExcel: r.H,
+                        sugeridoApp: sugeridoCalculado,
+                        unidad: r.C || 'UND',
+                        ultimaCompra: r.V || 'N/A',
+                        diasSinCompra: r.M || 0
+                    };
+                });
+                renderizar(baseDatos);
+            };
+            reader.readAsArrayBuffer(e.target.files[0]);
+        });
+
+        function renderizar(datos) {
+            const container = document.getElementById('listaContenedor');
+            if(datos.length === 0) return;
+
+            container.innerHTML = datos.map(p => `
+                <div class="card-proveedor bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-start">
+                        <div class="w-2/3">
+                            <span class="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase">${p.proveedor}</span>
+                            <h3 class="font-bold text-slate-800 text-sm mt-1 leading-tight">${p.producto}</h3>
+                            <p class="text-[10px] text-slate-500 font-mono">Ref: ${p.referencia} | Última: ${p.ultimaCompra}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[9px] text-slate-400 uppercase">Sugerido App</p>
+                            <p class="text-xl font-black text-blue-600">${p.sugeridoApp} <span class="text-[10px]">${p.unidad}</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-100 text-center">
+                        <div>
+                            <p class="text-[8px] text-slate-400 uppercase tracking-tighter">Venta 60d</p>
+                            <p class="text-[11px] font-bold text-slate-700">${p.promedio}</p>
+                        </div>
+                        <div>
+                            <p class="text-[8px] text-slate-400 uppercase tracking-tighter">Bodega</p>
+                            <p class="text-[11px] font-bold ${p.stock < (p.promedio/4) ? 'text-red-600' : 'text-slate-700'}">${p.stock}</p>
+                        </div>
+                        <div>
+                            <p class="text-[8px] text-slate-400 uppercase tracking-tighter">Días s/c</p>
+                            <p class="text-[11px] font-bold text-slate-700">${p.diasSinCompra}</p>
+                        </div>
+                    </div>
+
+                    <button onclick="pedirWhatsApp('${p.proveedor}', '${p.producto}', '${p.sugeridoApp}', '${p.unidad}')" 
+                            class="w-full mt-3 bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        📱 PEDIR ESTA SUGERENCIA
                     </button>
                 </div>
-            `;
-            document.getElementById('displayArea').innerHTML = html;
+            `).join('');
         }
 
-        function pedirWhatsApp(nombre, pres, precio) {
-            const tel = "3117700431";
-            const msj = `*NUEVO PEDIDO - VIBRAS POSITIVAS*%0A%0A` +
-                        `*Producto:* ${nombre}%0A` +
-                        `*Presentación:* ${pres}%0A` +
-                        `*Precio:* $${precio}%0A` +
-                        `*Ubicación:* ${ubicacionActual}`;
-            window.open(`https://wa.me/${tel}?text=${msj}`, '_blank');
+        function filtrar() {
+            const q = document.getElementById('searchInput').value.toUpperCase();
+            const f = baseDatos.filter(p => p.proveedor.includes(q) || p.producto.includes(q));
+            renderizar(f);
         }
 
-        function buscarManual() {
-            const query = document.getElementById('searchInput').value.toUpperCase();
-            const encontrado = productos.find(p => p.d.includes(query) || p.l.includes(query));
-            if (encontrado) renderizarProducto(encontrado);
-            else document.getElementById('displayArea').innerHTML = "<p class='text-center text-red-500'>No se encontró el producto</p>";
+        function pedirWhatsApp(prov, prod, sug, uni) {
+            const msj = `*ORDEN DE COMPRA - VIBRAS POSITIVAS*%0A%0A` +
+                        `*Proveedor:* ${prov}%0A` +
+                        `*Producto:* ${prod}%0A` +
+                        `*Sugerido:* ${sug} ${uni}%0A%0A` +
+                        `📍 *Ubicación Planta:* ${linkMapa}%0A%0A` +
+                        `_Generado por Analizador Vibras Positivas_`;
+            window.open(`https://wa.me/3117700431?text=${msj}`, '_blank');
         }
     </script>
 </body>
