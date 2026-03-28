@@ -2,36 +2,106 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sugeridor de Pedidos - Vibras Positivas</title>
-    </head>
-<body>
-    <div id="app">
-        <h1>¿Qué vamos a pedir hoy?</h1>
-        <select id="filtroLinea">
-            </select>
-        <button onclick="generarSugerencia()">¡Sugerir Producto!</button>
-        
-        <div id="resultado"></div>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f3f4f6; font-family: sans-serif; }
+        .pwa-card { border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-vibras { background-color: #2563eb; color: white; transition: 0.3s; }
+        .btn-vibras:hover { background-color: #1d4ed8; }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="max-w-md mx-auto bg-white pwa-card p-6">
+        <header class="text-center mb-6">
+            <h1 class="text-2xl font-bold text-blue-600">¿Qué pedir hoy?</h1>
+            <p class="text-gray-500 text-sm">Asistente de Pedidos Inteligente</p>
+        </header>
+
+        <div class="mb-4">
+            <input type="text" id="searchInput" placeholder="Buscar producto o marca..." 
+                   class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 mb-6">
+            <button onclick="sugerirProducto()" class="btn-vibras p-3 rounded-lg font-bold">✨ Sugerirme</button>
+            <button onclick="buscarManual()" class="bg-gray-200 p-3 rounded-lg font-bold">🔍 Buscar</button>
+        </div>
+
+        <div id="displayArea" class="border-t pt-4 min-h-[150px]">
+            <p class="text-center text-gray-400 mt-10">Presiona "Sugerirme" para empezar</p>
+        </div>
+
+        <div id="geoStatus" class="text-xs text-center mt-4 text-green-600 font-bold"></div>
+
+        <footer class="mt-8 pt-4 border-t text-center text-xs text-gray-500">
+            <p class="font-bold">App desarrollada por Vibras Positivas</p>
+            <p>Derechos Reservados © 2026</p>
+            <p>Contacto: 3117700431</p>
+        </footer>
     </div>
 
-    <footer>
-        <p>App desarrollada por Vibras Positivas © 2026</p>
-        <p>Derecho de autor: 3117700431</p>
-    </footer>
-
     <script>
-        // Lógica de Geolocalización que siempre usamos
-        function obtenerUbicacion() {
+        // Simulación de base de datos basada en tus columnas:
+        // O:CÓDIGO, D:DESCRIPCIÓN, A:LÍNEA, L:MARCA, J:PRESENTACIÓN, H:UNIDAD, E:SALDO, V:VALOR, M:IVA
+        const productos = [
+            { o: "001", d: "ARROZ SUPERARROZ", a: "GRANOS", l: "SUPERARROZ", j: "500G", h: "UND", e: 50, v: 2500, m: 0 },
+            { o: "002", d: "ACEITE VISTAHERMOSA", a: "ABARROTES", l: "VISTAHERMOSA", j: "1000ML", h: "UND", e: 20, v: 8500, m: 19 },
+            { o: "003", d: "DETERGENTE EN POLVO", a: "ASEO", l: "MARCA X", j: "1KG", h: "PAQ", e: 15, v: 12000, m: 19 }
+        ];
+
+        let ubicacionActual = "";
+
+        // Inicializar Geolocalización al abrir
+        window.onload = () => {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(pos => {
-                    const lat = pos.coords.latitude;
-                    const lon = pos.coords.longitude;
-                    console.log(`Ubicación: https://maps.google.com/?q=${lat},${lon}`);
+                    ubicacionActual = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+                    document.getElementById('geoStatus').innerText = "📍 Ubicación lista para el pedido";
                 });
             }
+        };
+
+        function sugerirProducto() {
+            const disponibles = productos.filter(p => p.e > 0);
+            const elegido = disponibles[Math.floor(Math.random() * disponibles.length)];
+            renderizarProducto(elegido);
         }
-        
-        // Aquí procesaremos tu archivo con las columnas O, D, A, L, J, H, E, V, M
+
+        function renderizarProducto(p) {
+            const precioFinal = p.v * (1 + (p.m / 100));
+            const html = `
+                <div class="bg-blue-50 p-4 rounded-lg animate-pulse">
+                    <h3 class="font-bold text-lg text-blue-800">${p.d}</h3>
+                    <p class="text-sm text-gray-600">Marca: ${p.l} | Presentación: ${p.j}</p>
+                    <p class="text-xl font-bold mt-2">$${precioFinal.toLocaleString()} <span class="text-xs font-normal">IVA Inc.</span></p>
+                    <button onclick="pedirWhatsApp('${p.d}', '${p.j}', ${precioFinal})" 
+                            class="w-full mt-4 bg-green-500 text-white p-2 rounded-lg font-bold flex items-center justify-center gap-2">
+                        📱 Pedir por WhatsApp
+                    </button>
+                </div>
+            `;
+            document.getElementById('displayArea').innerHTML = html;
+        }
+
+        function pedirWhatsApp(nombre, pres, precio) {
+            const tel = "3117700431";
+            const msj = `*NUEVO PEDIDO - VIBRAS POSITIVAS*%0A%0A` +
+                        `*Producto:* ${nombre}%0A` +
+                        `*Presentación:* ${pres}%0A` +
+                        `*Precio:* $${precio}%0A` +
+                        `*Ubicación:* ${ubicacionActual}`;
+            window.open(`https://wa.me/${tel}?text=${msj}`, '_blank');
+        }
+
+        function buscarManual() {
+            const query = document.getElementById('searchInput').value.toUpperCase();
+            const encontrado = productos.find(p => p.d.includes(query) || p.l.includes(query));
+            if (encontrado) renderizarProducto(encontrado);
+            else document.getElementById('displayArea').innerHTML = "<p class='text-center text-red-500'>No se encontró el producto</p>";
+        }
     </script>
 </body>
 </html>
