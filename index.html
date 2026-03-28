@@ -50,8 +50,8 @@
 
         <footer class="bg-gray-100 p-5 border-t-2 text-center">
             <div id="geoDisplay" class="text-[9px] text-red-600 font-bold mb-3 italic">📍 Geolocalización vinculada al análisis</div>
-            <p class="text-[10px] font-black text-gray-800 uppercase">App desarrollada por Vibras Positivas © 2026</p>
-            <p class="text-[9px] text-gray-400 font-bold uppercase">Derecho de autor: 3117700431 | Especialista Distrileco</p>
+            <p class="text-[10px] font-black text-gray-800 uppercase leading-none">App desarrollada por Vibras Positivas © 2026</p>
+            <p class="text-[9px] text-gray-400 font-bold uppercase mt-1">Derecho de autor: 3117700431 | Especialista Distrileco</p>
         </footer>
     </div>
 
@@ -60,14 +60,22 @@
         let datosFiltrados = [];
         let linkMapa = "";
 
-        // Geolocalización
+        // Función para transformar el número de Excel a fecha corta
+        function convertirFechaExcel(serial) {
+            if (!serial || isNaN(serial)) return serial;
+            let fecha = new Date(Math.round((serial - 25569) * 86400 * 1000));
+            let dia = String(fecha.getDate()).padStart(2, '0');
+            let mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            let anio = fecha.getFullYear();
+            return `${dia}/${mes}/${anio}`;
+        }
+
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(p => {
                 linkMapa = `https://www.google.com/maps?q=${p.coords.latitude},${p.coords.longitude}`;
             });
         }
 
-        // Limpia memoria al seleccionar archivo nuevo
         function resetearMemoria() {
             baseDatos = [];
             datosFiltrados = [];
@@ -83,12 +91,9 @@
                 const workbook = XLSX.read(data, { type: 'array' });
                 const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: "A" });
 
-                // Procesamiento con Lógica de Negocio: (L * 1.2) - J
                 baseDatos = json.filter(r => r.O && r.O !== "PROVEEDOR").map(r => {
                     const venta60 = parseFloat(r.L) || 0;
                     const stockJ = parseFloat(r.J) || 0;
-                    
-                    // Fórmula: Venta 60d + 20% - Bodega
                     const calculo = Math.ceil((venta60 * 1.2) - stockJ);
                     const sugeridoApp = Math.max(0, calculo);
 
@@ -99,7 +104,7 @@
                         VENTA_60D: venta60,
                         BODEGA: stockJ,
                         UNIDAD: r.C,
-                        ULTIMA_COMPRA: r.V,
+                        ULTIMA_COMPRA: convertirFechaExcel(r.V), // Aplica la conversión aquí
                         DIAS_SC: r.M,
                         PEDIDO_SUGERIDO: sugeridoApp
                     };
