@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sugeridor de Pedidos - Vibras Positivas</title>
+    </head>
+<body>
+    <div id="app">
+        <h1>¿Qué vamos a pedir hoy?</h1>
+        <select id="filtroLinea">
+            </select>
+        <button onclick="generarSugerencia()">¡Sugerir Producto!</button>
+        
+        <div id="resultado"></div>
+    </div>
+
+    <footer>
+        <p>App desarrollada por Vibras Positivas © 2026</p>
+        <p>Derecho de autor: 3117700431</p>
+    </footer>
+
+    <script>
+        // Lógica de Geolocalización que siempre usamos
+        function obtenerUbicacion() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    console.log(`Ubicación: https://maps.google.com/?q=${lat},${lon}`);
+                });
+            }
+        }
+        
+        // Aquí procesaremos tu archivo con las columnas O, D, A, L, J, H, E, V, M
+    </script>
+</body>
+</html>
